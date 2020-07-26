@@ -35,6 +35,7 @@ if (fs.existsSync('build')) {
   fs.rmdirSync('build', { recursive: true })
 }
 
+fs.mkdirSync('build')
 fs.writeFileSync(`build/metadata.json`, JSON.stringify({ locales }))
 
 locales.forEach(locale => {
