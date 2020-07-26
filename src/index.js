@@ -35,6 +35,8 @@ if (fs.existsSync('build')) {
   fs.rmdirSync('build', { recursive: true })
 }
 
+fs.writeFileSync(`build/metadata.json`, JSON.stringify({ locales }))
+
 locales.forEach(locale => {
   fs.mkdirSync(`build/${locale}`, { recursive: true })
   logger.debug(`Fetching weapons page in ${locale}`)
