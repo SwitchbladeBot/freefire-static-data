@@ -1,0 +1,30 @@
+{
+  "name": "freefire-static-data",
+  "version": "1.0.0",
+  "description": "Garena Free Fire static data scraped from the official website and structured as JSON",
+  "main": "src/index.js",
+  "scripts": {
+    "build": "node src/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SwitchbladeBot/freefire-static-data.git"
+  },
+  "keywords": [
+    "freefire",
+    "garena"
+  ],
+  "author": "Pedro Fracassi <pedroluizfracassi@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/SwitchbladeBot/freefire-static-data/issues"
+  },
+  "homepage": "https://github.com/SwitchbladeBot/freefire-static-data#readme",
+  "dependencies": {
+    "axios": "^0.19.2",
+    "cheerio": "^1.0.0-rc.3"
+  },
+  "devDependencies": {
+    "standard": "^14.3.4"
+  }
+}
