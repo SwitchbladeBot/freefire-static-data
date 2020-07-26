@@ -5,4 +5,4 @@ Garena Free Fire static data scraped from the official website and structured as
 
 - [x] Weapons
 - [ ] Characters
-- [ ] metadata.json
+- [x] metadata.json
