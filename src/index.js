@@ -36,12 +36,12 @@ if (fs.existsSync('build')) {
 }
 
 fs.mkdirSync('build')
-fs.writeFileSync(`build/metadata.json`, JSON.stringify({ locales }))
+fs.writeFileSync('build/metadata.json', JSON.stringify({ locales }))
 
 locales.forEach(locale => {
   fs.mkdirSync(`build/${locale}`, { recursive: true })
   logger.debug(`Fetching weapons page in ${locale}`)
-  axios.get(`/weapons/index/${locale}`).then(response => {
+  axios.get(`/weapons/index/${locale}`).then(({ data }) => {
     logger.info(`Got weapons page in ${locale}`)
 
     /*
@@ -51,9 +51,7 @@ locales.forEach(locale => {
       cheerio instance, which is then used for getting weapon
       information.
     */
-    const $$ = cheerio.load(response.data)
-    const weaponHTML = $$('script#weaponTpml').html()
-    const $ = cheerio.load(`<html><body><ul>${weaponHTML}</ul></body></html>`)
+    const $ = cheerio.load(cheerio.load(data)('script#weaponTpml').html())
 
     const commons = {
       attribute_names: {},
@@ -62,34 +60,32 @@ locales.forEach(locale => {
       attachment_icons: {}
     }
 
-    const weapons = $('body > ul > li').map((i, weaponElement) => {
-      const weaponInstance = $(weaponElement).children('div')
+    const weapons = $.root().find('body > li').map((_, weaponElement) => {
+      const weapon = $('div', weaponElement)
       return {
-        name: weaponInstance.children('h4').children('span').first().text(),
-        ammunition: parseInt(weaponInstance.children('h4').children('span.m-bullet').text()) || null,
-        description: weaponInstance.children('p.m-weapon-txt').children('span').text(),
-        skins: $('ul.m-weapon-item-list.x-box.item-list > li', weaponElement).map((i, skinElement) => {
+        name: $('h4 > span:first-child', weapon).text(),
+        ammunition: parseInt($('h4 > span.m-bullet', weapon).text()) || null,
+        description: $('.m-weapon-txt', weapon).text(),
+        skins: $('ul.m-weapon-item-list > li', weapon).map((_, skin) => ({
+          id: parseInt($(skin).text()),
+          default: $(skin).attr('data-img') === $('.m-weapon-gun > img', weapon).attr('src'),
+          image_url: $(skin).attr('data-img')
+        })).get(),
+        attributes: attributeKeys.reduce((object, current, i) => {
+          const attribute = $(`ul.m-weapon-data > li:nth-child(${++i})`, weapon)
+          if (!commons.attribute_names[current]) commons.attribute_names[current] = $('div.txt', attribute).text()
           return {
-            id: parseInt($(skinElement).text()),
-            default: $(skinElement).attr('data-img') === weaponInstance.children('div.m-weapon-gun').children('img').attr('src'),
-            image_url: $(skinElement).attr('data-img')
-          }
-        }).toArray(),
-        attributes: attributeKeys.reduce((object, current, index) => {
-          const attributeInstance = weaponInstance.children('ul.m-weapon-data').children(`li:nth-child(${index + 1})`)
-          if (!commons.attribute_names[current]) commons.attribute_names[current] = attributeInstance.children('div.txt').text()
-          return {
-            [current]: parseInt(attributeInstance.children('div.m-weapon-line').children('span.num').text()),
+            [current]: parseInt($('div.m-weapon-line > span.num', attribute).text()),
             ...object
           }
         }, {}),
-        attachments: attachmentKeys.reduce((object, current, index) => {
-          const attachmentInstance = $('ul.m-weapon-config.item-list', weaponElement).children(`li:nth-child(${index + 1})`).children('a')
-          const isAvaliable = !!attachmentInstance.children('div.u-hint-txt').length
-          const hintOverride = !!attachmentInstance.children('div.u-hint-icon').length
-          const hintText = attachmentInstance.children('div.u-hint-txt').children('span').text()
-          const iconUrl = attachmentInstance.children('div.img').children('img').attr('src')
-          if (!commons.attachment_names[current]) commons.attachment_names[current] = attachmentInstance.clone().children().remove().end().text().trim()
+        attachments: attachmentKeys.reduce((object, current, i) => {
+          const attachment = $(`ul.m-weapon-config.item-list > li:nth-child(${++i}) > a`, weapon)
+          const isAvaliable = !!$('div.u-hint-txt', attachment).length
+          const hintOverride = !!$('div.u-hint-icon', attachment).length
+          const hintText = $('div.u-hint-txt > span', attachment).text()
+          const iconUrl = $('div.img > img', attachment).attr('src')
+          if (!commons.attachment_names[current]) commons.attachment_names[current] = attachment.contents().last().text().trim()
           if (!commons.attachment_icons[current]) commons.attachment_icons[current] = {}
           if (!commons.attachment_icons[current][isAvaliable]) commons.attachment_icons[current][isAvaliable] = iconUrl
           if (!hintOverride && !commons.attachment_hints[current]) commons.attachment_hints[current] = hintText
@@ -102,11 +98,9 @@ locales.forEach(locale => {
             ...object
           }
         }, {}),
-        labels: weaponInstance.children('div.m-weapon-label').children('span').map((index, labelElement) => {
-          return $(labelElement).text()
-        }).toArray()
+        labels: $('div.m-weapon-label > span', weapon).map((_, labelElement) => $(labelElement).text()).get()
       }
-    }).toArray()
+    }).get()
 
     fs.writeFileSync(`build/${locale}/weapons.json`, JSON.stringify({ commons, weapons }))
   })
